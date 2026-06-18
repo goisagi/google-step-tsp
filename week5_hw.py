@@ -1,4 +1,6 @@
 import sys
+import random
+import math
 
 def read_input(filename):
     with open(filename) as f:
@@ -76,6 +78,56 @@ def two_opt(cities, route):
                     improved = True
     return route
 
+#焼きなまし法
+def simulated_annealing(cities, route):
+    route_len = len(route)
+
+    current_route = route[:] #routeのコピー
+    current_length = route_length(cities, current_route)
+
+    best_route = current_route[:]
+    best_length = current_length
+
+    T = 1000.0 #温度の初期値
+    cooling_rate = 0.9995 #1ループごとにTを下げる度合い
+
+    #温度が冷えるまで探索を繰り返す
+    while T > 0.01:
+        #2-optの切断位置をランダムで選択する
+        i = random.randint(0, route_len-3)
+        j = random.randint(i+2,route_len-1)
+
+        if i == 0 and j == route_len-1:
+            continue
+
+        a, b = cities[current_route[i]], cities[current_route[i+1]]
+        c, d = cities[current_route[j]], cities[current_route[(j+1)%route_len]]
+
+        delta = distance(a, c) + distance(b, d) - distance(a, b) - distance(c, d)
+        
+        accept = False
+        #距離が改善されるならば必ず採用
+        if delta < 0:
+            accept = True
+        #距離が悪化する場合は、その差・温度・ランダムな数字によって採用するかを決定する
+        else:
+            probability = math.exp(-delta/T)
+            if random.random() < probability:
+                accept = True
+
+        if accept:
+            candidate_route = current_route[:i+1] + current_route[i+1:j+1][::-1] + current_route[j+1:]
+            current_route = candidate_route
+            current_length += delta
+
+            if current_length < best_length:
+                best_length = current_length
+                best_route = current_route[:]
+
+        T *= cooling_rate
+    return best_route
+
+
 
 def main():
     if len(sys.argv) != 3:
@@ -86,10 +138,15 @@ def main():
     output_file = sys.argv[2]
     cities = read_input(input_file)
     route = greedy_algorithm(cities)
-    new_route = two_opt(cities, route)
-    output_str = 'index\n'+'\n'.join(map(str,new_route))
+    route = two_opt(cities, route)
+    route = simulated_annealing(cities, route)
+    route = two_opt(cities, route)
+
+    output_str = 'index\n'+'\n'.join(map(str,route))
     with open(output_file, 'w') as f:
         f.write(output_str)
+    
+    print (route_length(cities, route))
 
 if __name__ == "__main__":
     main()
