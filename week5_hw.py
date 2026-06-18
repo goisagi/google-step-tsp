@@ -111,8 +111,7 @@ def simulated_annealing(cities, route):
             accept = True
         #距離が悪化する場合は、その差・温度・ランダムな数字によって採用するかを決定する
         else:
-            probability = math.exp(-delta/T)
-            if random.random() < probability:
+            if random.random() < math.exp(-delta/T):
                 accept = True
 
         if accept:
